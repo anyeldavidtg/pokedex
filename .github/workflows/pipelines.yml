@@ -1,9 +1,9 @@
-name: Run test-coverage
+name: Build y pruebas
 
 on: [push]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,9 +14,6 @@ jobs:
         with:
           node-version: 18.x
 
-      # pipeline actions
       - run: npm install
       - run: npm run test:cov
-      - run: ./node_modules/.bin/codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - run: npm run build
