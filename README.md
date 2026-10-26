@@ -31,7 +31,7 @@
 <p>| Campo | Valor utilizado |</p>
 <p>|—|---|</p>
 <p>| Suscripción | Azure for Students |</p>
-<p>| Grupo de recursos | <code>anyel_torres</code> (nuevo) |</p>
+<p>| Grupo de recursos | <code>anyel_torres</code> |</p>
 <p>| Nombre de la aplicación | <code>anyeldavidtg</code> |</p>
 <p>| Publicar | Código |</p>
 <p>| Pila en tiempo de ejecución | .NET 10 |</p>
