@@ -1,0 +1,280 @@
+---
+
+
+---
+
+<h1 id="despliegue-de-pokedex-en-azure-web-apps">Despliegue de PokeDex en Azure Web Apps</h1>
+<p>Esta guía explica cómo se compila y se publica la aplicación <strong>PokeDex</strong> (Angular) en un <strong>Azure Web App</strong> con sistema operativo Windows (IIS). El proceso quedó automatizado con <strong>GitHub Actions</strong>: cada <code>git push</code> a la rama <code>main</code> compila y despliega la aplicación.</p>
+<ul>
+<li><strong>Aplicación:</strong> <a href="https://anyeldavidtg-fyfyetezhzc4f3gr.brazilsouth-01.azurewebsites.net">https://anyeldavidtg-fyfyetezhzc4f3gr.brazilsouth-01.azurewebsites.net</a></li>
+<li><strong>Repositorio:</strong> <a href="https://github.com/anyeldavidtg/pokedex">https://github.com/anyeldavidtg/pokedex</a></li>
+<li><strong>Web App:</strong> <code>anyeldavidtg</code> (Windows, .NET 10, plan Free F1, región Brazil South)</li>
+</ul>
+<hr>
+<h2 id="requisitos-previos">1. Requisitos previos</h2>
+<p>Requisito</p>
+<p>Uso</p>
+<p>Cuenta de Azure for Students y Web App creado</p>
+<p>Ver <a href="https://claude.ai/chat/README.md">README.md</a></p>
+<p>Cuenta de GitHub y repositorio <code>pokedex</code></p>
+<p>Código y GitHub Actions</p>
+<p>Node.js 18 y npm</p>
+<p>Instalar dependencias y compilar</p>
+<p>Git</p>
+<p>Subir los cambios</p>
+<p>Visual Studio Code</p>
+<p>Editor y terminal</p>
+<h2 id="código-fuente">2. Código fuente</h2>
+<ol>
+<li>Del repositorio de rcuello se descarga el ZIP (carpeta <code>sistemas-distribuidos/poke-dex-lab/source/pokedex-angular</code>). Contiene otro ZIP, <code>pokedex-angular.zip</code>, que se descomprime.</li>
+<li>El proyecto es una aplicación <strong>Angular</strong> que consume la PokéAPI. Se instala con <code>npm install</code> y se compila con <code>npm run build</code>.</li>
+<li>Se creó el repositorio <code>pokedex</code> en GitHub, se clonó y se copió el contenido del proyecto <strong>sin</strong> <code>node_modules</code>, <code>dist</code> ni <code>.angular</code>:</li>
+</ol>
+<pre class=" language-powershell"><code class="prism  language-powershell">git clone https:<span class="token operator">/</span><span class="token operator">/</span>github<span class="token punctuation">.</span>com<span class="token operator">/</span>anyeldavidtg<span class="token operator">/</span>pokedex<span class="token punctuation">.</span>git
+robocopy <span class="token punctuation">.</span> pokedex <span class="token operator">/</span>E <span class="token operator">/</span>XD node_modules dist <span class="token punctuation">.</span>angular pokedex <span class="token punctuation">.</span>git <span class="token operator">/</span>XF README<span class="token punctuation">.</span>md
+cd pokedex
+git add <span class="token punctuation">.</span>
+git commit <span class="token operator">-</span>m <span class="token string">"Agrega código fuente de PokeDex"</span>
+git push origin main
+
+</code></pre>
+<blockquote>
+<p>El proyecto usa <strong>husky</strong> y <strong>commitizen</strong>: al hacer <code>git commit</code> aparece un menú para elegir el tipo de cambio (<code>feat</code>, <code>fix</code>, etc.).</p>
+</blockquote>
+<h2 id="compilación-local-prueba">3. Compilación local (prueba)</h2>
+<p>Dentro de la carpeta del proyecto:</p>
+<pre class=" language-powershell"><code class="prism  language-powershell">npm install
+npm run build
+
+</code></pre>
+<p>El resultado queda en <code>dist/pokedex-angular</code>. <strong>Solo el contenido de esa carpeta se publica</strong> en Azure: son archivos estáticos (HTML, CSS y JavaScript).</p>
+<p>Durante la instalación aparecen avisos de dependencias antiguas y vulnerabilidades. Es normal en un proyecto de hace varios años; no se ejecutó <code>npm audit fix --force</code> porque puede romper la compilación. Los avisos de <em>budget</em> del build tampoco impiden generar la aplicación.</p>
+<h2 id="ajustes-necesarios-para-azure">4. Ajustes necesarios para Azure</h2>
+<p>El proyecto original estaba pensado para GitHub Pages. Para que funcione en Azure (IIS) se hicieron estos cambios.</p>
+<h3 id="archivo-srcweb.config">4.1. Archivo <code>src/web.config</code></h3>
+<p>IIS usa este archivo para dos cosas: <strong>reescribir rutas</strong> (la aplicación es de una sola página, así que <code>/pokemon/25</code> debe devolver <code>index.html</code>) y <strong>enviar los encabezados de seguridad</strong>.</p>
+<pre class=" language-xml"><code class="prism  language-xml"><span class="token prolog">&lt;?xml version="1.0" encoding="utf-8"?&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>configuration</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>system.webServer</span><span class="token punctuation">&gt;</span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>rewrite</span><span class="token punctuation">&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>rules</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>rule</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Angular Routes<span class="token punctuation">"</span></span> <span class="token attr-name">stopProcessing</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>true<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>match</span> <span class="token attr-name">url</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>.*<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>conditions</span> <span class="token attr-name">logicalGrouping</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>MatchAll<span class="token punctuation">"</span></span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">input</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>{REQUEST_FILENAME}<span class="token punctuation">"</span></span> <span class="token attr-name">matchType</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>IsFile<span class="token punctuation">"</span></span> <span class="token attr-name">negate</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>true<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">input</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>{REQUEST_FILENAME}<span class="token punctuation">"</span></span> <span class="token attr-name">matchType</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>IsDirectory<span class="token punctuation">"</span></span> <span class="token attr-name">negate</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>true<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>conditions</span><span class="token punctuation">&gt;</span></span>
+          <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>action</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Rewrite<span class="token punctuation">"</span></span> <span class="token attr-name">url</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>/index.html<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>rule</span><span class="token punctuation">&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>rules</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>rewrite</span><span class="token punctuation">&gt;</span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>staticContent</span><span class="token punctuation">&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>remove</span> <span class="token attr-name">fileExtension</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>.json<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>mimeMap</span> <span class="token attr-name">fileExtension</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>.json<span class="token punctuation">"</span></span> <span class="token attr-name">mimeType</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>application/json<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>remove</span> <span class="token attr-name">fileExtension</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>.woff2<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>mimeMap</span> <span class="token attr-name">fileExtension</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>.woff2<span class="token punctuation">"</span></span> <span class="token attr-name">mimeType</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>font/woff2<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>staticContent</span><span class="token punctuation">&gt;</span></span>
+
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>httpProtocol</span><span class="token punctuation">&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>customHeaders</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>remove</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>X-Powered-By<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Strict-Transport-Security<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>max-age=31536000; includeSubDomains; preload<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>X-Content-Type-Options<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>nosniff<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>X-Frame-Options<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>DENY<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Referrer-Policy<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>strict-origin-when-cross-origin<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Permissions-Policy<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Cross-Origin-Opener-Policy<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>same-origin<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Cross-Origin-Resource-Policy<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>same-origin<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>add</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>Content-Security-Policy<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation">=</span><span class="token punctuation">"</span>default-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span>; script-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span> <span class="token punctuation">'</span>sha256-QmIi/LDJnOEYAO9CVS/+JVvnKMiVsY6fn0FVoHnkPfg=<span class="token punctuation">'</span>; script-src-attr <span class="token punctuation">'</span>unsafe-hashes<span class="token punctuation">'</span> <span class="token punctuation">'</span>sha256-MhtPZXr7+LpJUY5qtMutB+qWfQtMaPccfe7QXtCcEYc=<span class="token punctuation">'</span>; style-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span> <span class="token punctuation">'</span>unsafe-inline<span class="token punctuation">'</span> https://fonts.googleapis.com; font-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span> https://fonts.gstatic.com data:; img-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span> data: https://raw.githubusercontent.com https://*.githubusercontent.com https://pokeapi.co https://assets.pokemon.com; connect-src <span class="token punctuation">'</span>self<span class="token punctuation">'</span> https://pokeapi.co https://beta.pokeapi.co; object-src <span class="token punctuation">'</span>none<span class="token punctuation">'</span>; frame-ancestors <span class="token punctuation">'</span>none<span class="token punctuation">'</span>; base-uri <span class="token punctuation">'</span>self<span class="token punctuation">'</span>; form-action <span class="token punctuation">'</span>self<span class="token punctuation">'</span>; upgrade-insecure-requests<span class="token punctuation">"</span></span> <span class="token punctuation">/&gt;</span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>customHeaders</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>httpProtocol</span><span class="token punctuation">&gt;</span></span>
+
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>system.webServer</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>configuration</span><span class="token punctuation">&gt;</span></span>
+
+</code></pre>
+<h3 id="copiar-el-web.config-al-compilar">4.2. Copiar el <code>web.config</code> al compilar</h3>
+<p>En <code>angular.json</code>, dentro de <code>architect &gt; build &gt; options</code>, se agregó <code>src/web.config</code> a la lista <code>assets</code>:</p>
+<pre class=" language-json"><code class="prism  language-json"><span class="token string">"assets"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"src/favicon.ico"</span><span class="token punctuation">,</span> <span class="token string">"src/og-image.jpg"</span><span class="token punctuation">,</span> <span class="token string">"src/assets"</span><span class="token punctuation">,</span> <span class="token string">"src/404.html"</span><span class="token punctuation">,</span> <span class="token string">"src/web.config"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+
+</code></pre>
+<p>Así Angular copia el archivo a <code>dist/pokedex-angular</code> en cada compilación.</p>
+<h3 id="ruta-de-las-imágenes">4.3. Ruta de las imágenes</h3>
+<p>En <code>src/environments/environment.prod.ts</code> y <code>src/environments/environment.ts</code>, la ruta de las imágenes apuntaba a <code>/pokedex-angular/assets/images</code> (ruta de GitHub Pages). En Azure ese camino no existe y devolvía la página de la aplicación en lugar de la imagen. Se cambió a:</p>
+<pre class=" language-ts"><code class="prism  language-ts">imagesPath<span class="token punctuation">:</span> <span class="token string">'/assets/images'</span><span class="token punctuation">,</span>
+
+</code></pre>
+<h2 id="encabezados-de-seguridad">5. Encabezados de seguridad</h2>
+<p>Encabezado</p>
+<p>Valor</p>
+<p>Para qué sirve</p>
+<p>Strict-Transport-Security</p>
+<p><code>max-age=31536000; includeSubDomains; preload</code></p>
+<p>Obliga a usar HTTPS</p>
+<p>X-Content-Type-Options</p>
+<p><code>nosniff</code></p>
+<p>Evita que el navegador adivine tipos de archivo</p>
+<p>X-Frame-Options</p>
+<p><code>DENY</code></p>
+<p>Impide mostrar el sitio dentro de un iframe (clickjacking)</p>
+<p>Referrer-Policy</p>
+<p><code>strict-origin-when-cross-origin</code></p>
+<p>Limita la información enviada en el referer</p>
+<p>Permissions-Policy</p>
+<p>cámara, micrófono, geolocalización, pagos y USB desactivados</p>
+<p>Restringe funciones del navegador</p>
+<p>Cross-Origin-Opener-Policy / Resource-Policy</p>
+<p><code>same-origin</code></p>
+<p>Aísla el sitio de otros orígenes</p>
+<p>Content-Security-Policy</p>
+<p>ver abajo</p>
+<p>Define qué recursos puede cargar la página</p>
+<p><strong>Content-Security-Policy.</strong> Se parte de <code>default-src 'self'</code> y se permite únicamente lo que la aplicación necesita:</p>
+<ul>
+<li><code>connect-src</code>: <code>pokeapi.co</code> y <code>beta.pokeapi.co</code> (la aplicación consulta la API GraphQL de la PokéAPI).</li>
+<li><code>img-src</code>: <code>raw.githubusercontent.com</code> y <code>pokeapi.co</code> (sprites) y <code>assets.pokemon.com</code> (imagen del detalle de cada Pokémon).</li>
+<li><code>script-src</code>: solo el propio sitio. El <code>index.html</code> trae un script en línea (heredado de GitHub Pages) y Angular agrega un manejador <code>onload</code> al cargar los estilos. En lugar de usar <code>'unsafe-inline'</code>, se permiten con su <strong>hash SHA-256</strong>, de modo que no se debilita la política.</li>
+<li><code>object-src 'none'</code>, <code>frame-ancestors 'none'</code>, <code>base-uri 'self'</code> y <code>form-action 'self'</code> cierran vectores comunes de ataque.</li>
+</ul>
+<blockquote>
+<p>Si algún recurso queda bloqueado, la consola del navegador (F12) muestra el mensaje <code>Content Security Policy</code> con el dominio o el hash exacto que hay que agregar.</p>
+</blockquote>
+<h2 id="despliegue-automático-con-github-actions">6. Despliegue automático con GitHub Actions</h2>
+<h3 id="activar-la-autenticación-básica-de-scm">6.1. Activar la autenticación básica de SCM</h3>
+<p>En el portal de Azure: Web App <code>anyeldavidtg</code> &gt; <strong>Configuración &gt; Configuración general</strong> &gt; activar <strong>Credenciales de publicación de autenticación básica de SCM</strong> &gt; <strong>Aplicar</strong>.</p>
+<h3 id="guardar-el-perfil-de-publicación-como-secret">6.2. Guardar el perfil de publicación como secret</h3>
+<ol>
+<li>En Azure: <strong>Información general &gt; Obtener perfil de publicación</strong>. Se descarga un archivo <code>.PublishSettings</code>.</li>
+<li>Abre el archivo con el Bloc de notas y copia todo su contenido.</li>
+<li>En GitHub: repositorio &gt; <strong>Settings &gt; Secrets and variables &gt; Actions &gt; New repository secret</strong>.</li>
+<li>Nombre: <code>AZURE_WEBAPP_PUBLISH_PROFILE</code>. Valor: el contenido copiado.</li>
+<li>Elimina el archivo descargado. <strong>Nunca se sube al repositorio.</strong></li>
+</ol>
+<h3 id="flujo-de-trabajo">6.3. Flujo de trabajo</h3>
+<p>Archivo <code>.github/workflows/pipelines.yml</code>:</p>
+<pre class=" language-yaml"><code class="prism  language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> Build y despliegue a Azure
+
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>main<span class="token punctuation">]</span>
+  <span class="token key atrule">workflow_dispatch</span><span class="token punctuation">:</span>
+
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">build</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/checkout@v4
+
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Use Node.js 18.x
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/setup<span class="token punctuation">-</span>node@v4
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">node-version</span><span class="token punctuation">:</span> 18.x
+          <span class="token key atrule">cache</span><span class="token punctuation">:</span> npm
+
+      <span class="token punctuation">-</span> <span class="token key atrule">run</span><span class="token punctuation">:</span> npm ci
+      <span class="token punctuation">-</span> <span class="token key atrule">run</span><span class="token punctuation">:</span> npm run test<span class="token punctuation">:</span>cov
+      <span class="token punctuation">-</span> <span class="token key atrule">run</span><span class="token punctuation">:</span> npm run build
+
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Subir artefacto
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/upload<span class="token punctuation">-</span>artifact@v4
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">name</span><span class="token punctuation">:</span> pokedex<span class="token punctuation">-</span>dist
+          <span class="token key atrule">path</span><span class="token punctuation">:</span> dist/pokedex<span class="token punctuation">-</span>angular
+
+  <span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">needs</span><span class="token punctuation">:</span> build
+
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Descargar artefacto
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/download<span class="token punctuation">-</span>artifact@v4
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">name</span><span class="token punctuation">:</span> pokedex<span class="token punctuation">-</span>dist
+          <span class="token key atrule">path</span><span class="token punctuation">:</span> publish
+
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Desplegar en Azure App Service
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> azure/webapps<span class="token punctuation">-</span>deploy@v3
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">app-name</span><span class="token punctuation">:</span> anyeldavidtg
+          <span class="token key atrule">publish-profile</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.AZURE_WEBAPP_PUBLISH_PROFILE <span class="token punctuation">}</span><span class="token punctuation">}</span>
+          <span class="token key atrule">package</span><span class="token punctuation">:</span> publish
+
+</code></pre>
+<p><strong>Qué hace:</strong></p>
+<ol>
+<li><strong>build:</strong> instala las dependencias, ejecuta las pruebas, compila con <code>npm run build</code> y guarda <code>dist/pokedex-angular</code> como artefacto.</li>
+<li><strong>deploy:</strong> descarga el artefacto y lo publica en el Web App <code>anyeldavidtg</code> usando el secret.</li>
+</ol>
+<h3 id="publicar-un-cambio">6.4. Publicar un cambio</h3>
+<pre class=" language-powershell"><code class="prism  language-powershell">git add <span class="token punctuation">.</span>
+git commit
+git push origin main
+
+</code></pre>
+<p>En la pestaña <strong>Actions</strong> del repositorio deben quedar en verde los trabajos <strong>build</strong> y <strong>deploy</strong> (unos 3 minutos). Si hace falta, el flujo también se lanza manualmente con <strong>Run workflow</strong>.</p>
+<h2 id="método-alternativo-kudu-laboratorio-del-profesor">7. Método alternativo: Kudu (laboratorio del profesor)</h2>
+<p>El laboratorio guiado propone subir los archivos manualmente:</p>
+<ol>
+<li>Compilar la aplicación (<code>npm run build</code>).</li>
+<li>En el Web App, ir a <strong>Development Tools &gt; Advanced Tools &gt; Go</strong> para abrir <strong>Kudu</strong>.</li>
+<li><strong>Debug console &gt; CMD</strong> y entrar a la carpeta con <code>cd site/wwwroot</code>.</li>
+<li>Arrastrar y soltar el contenido de <code>dist/pokedex-angular</code> en esa carpeta.</li>
+</ol>
+<p>Se eligió GitHub Actions porque hace el despliegue repetible y sin pasos manuales.</p>
+<h2 id="verificación">8. Verificación</h2>
+<ol>
+<li>Abrir la URL de la aplicación: carga el listado de 151 Pokémon con sus imágenes.</li>
+<li>Entrar a un Pokémon (por ejemplo <code>/pokemon/5</code>) y recargar con F5: no debe dar error 404.</li>
+<li>Revisar la consola del navegador (F12): sin errores de CSP.</li>
+<li>Verificar los encabezados:</li>
+</ol>
+<pre class=" language-powershell"><code class="prism  language-powershell">curl<span class="token punctuation">.</span>exe <span class="token operator">-</span>I https:<span class="token operator">/</span><span class="token operator">/</span>anyeldavidtg<span class="token operator">-</span>fyfyetezhzc4f3gr<span class="token punctuation">.</span>brazilsouth<span class="token operator">-</span>01<span class="token punctuation">.</span>azurewebsites<span class="token punctuation">.</span>net
+
+</code></pre>
+<h2 id="resultados-de-seguridad">9. Resultados de seguridad</h2>
+<p>Herramienta</p>
+<p>Resultado</p>
+<p><a href="https://securityheaders.com/">SecurityHeaders.com</a></p>
+<p><strong>A+</strong> (seis encabezados en verde: Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy y Content-Security-Policy)</p>
+<p><a href="https://www.ssllabs.com/ssltest/">SSL Labs</a></p>
+<p><strong>A+</strong> (TLS 1.3, HSTS de larga duración y política CAA)</p>
+<p>SSL Labs señala que el servidor no soporta intercambio de claves post-cuántico (PQC). Es un aviso informativo que depende de la plataforma de Azure y no afecta la calificación.</p>
+<h2 id="problemas-encontrados-y-soluciones">10. Problemas encontrados y soluciones</h2>
+<p>Problema</p>
+<p>Causa</p>
+<p>Solución</p>
+<p>Fallaba el flujo de GitHub Actions (paso <code>codecov</code>)</p>
+<p>El paquete <code>codecov</code> está obsoleto y no funciona con el servicio actual</p>
+<p>Se eliminó ese paso del flujo</p>
+<p><code>npm run build</code> fallaba con <code>normalize.css</code></p>
+<p>La carpeta clonada no tenía <code>node_modules</code></p>
+<p>Ejecutar <code>npm install</code> en esa carpeta</p>
+<p>Menú interactivo al hacer <code>git commit</code></p>
+<p>El proyecto usa commitizen y husky</p>
+<p>Elegir el tipo de cambio (<code>feat</code>, <code>fix</code>) y responder las preguntas</p>
+<p>Error 500 “POKÉAPI está evolucionando”</p>
+<p>La CSP bloqueaba <code>https://beta.pokeapi.co</code></p>
+<p>Agregar el dominio a <code>connect-src</code></p>
+<p>Script en línea y <code>onload</code> bloqueados</p>
+<p><code>script-src 'self'</code> no permite código en línea</p>
+<p>Permitirlos con su hash SHA-256</p>
+<p>Imágenes del listado no cargaban</p>
+<p><code>imagesPath</code> apuntaba a <code>/pokedex-angular/...</code></p>
+<p>Cambia el <code>/assets/images</code></p>
+<p>Imagen del detalle del Pokémon bloqueada</p>
+<p><code>img-src</code> no incluía <code>assets.pokemon.com</code></p>
+<p>Agregar el dominio a <code>img-src</code></p>
+<p>La página mostraba la versión anterior</p>
+<p>Caché del navegador</p>
+<p>Recargar con Ctrl + Shift + R o usar ventana de incógnito</p>
+<h2 id="referencias">11. Referencias</h2>
+<ul>
+<li><a href="https://learn.microsoft.com/azure/app-service/">Documentación de Azure App Service</a></li>
+<li><a href="https://github.com/Azure/webapps-deploy">azure/webapps-deploy</a></li>
+<li><a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Security-Policy">MDN: Content-Security-Policy</a></li>
+<li>Aplicación original: <a href="https://github.com/keilermora/pokedex-angular">Keiler Mora</a></li>
+</ul>
+
