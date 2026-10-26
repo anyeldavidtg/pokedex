@@ -37,7 +37,7 @@
 <p>| Pila en tiempo de ejecución | .NET 10 |</p>
 <p>Sistema operativo | Windows |</p>
 <p>| Región | Brazil South |</p>
-<p>| Plan de Windows | <code>ASP-anyeltorres-88f0</code> (nuevo) |</p>
+<p>| Plan de Windows | <code>ASP-anyeltorres-88f0</code> |</p>
 <p>| Plan de precios | <strong>Free F1</strong> (infraestructura compartida) |</p>
 <ol start="4">
 <li>Se hace clic en <strong>Revisar y crear</strong>.5. Se Verifica en el resumen que el SKU sea <strong>Free</strong> (precio estimado: gratis).6. Se hace clic en <strong>Crear</strong> y espera un par de minutos hasta ver <strong>Su implementación está completa</strong>.7. Se hace clic en <strong>Ir al recurso</strong>. El estado del Web App debe aparecer como <strong>En ejecución</strong>.</li>
